@@ -1,0 +1,80 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap');
+
+:root {
+  font-family: 'Manrope', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #243028;
+  background:
+    radial-gradient(circle at top left, rgba(182, 147, 118, 0.18), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(109, 128, 117, 0.14), transparent 26%),
+    #f4efe8;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  --ink: #243028;
+  --soft-ink: #66736b;
+  --muted: #7f897f;
+  --panel: #fcfaf7;
+  --border: rgba(36, 48, 40, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3 {
+  font-family: 'Cormorant Garamond', serif;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+h1 {
+  font-size: clamp(3.25rem, 6vw, 6.4rem);
+  line-height: 0.9;
+}
+
+h2 {
+  font-size: clamp(2.2rem, 4vw, 3.5rem);
+  line-height: 0.92;
+}
+
+h3 {
+  font-size: clamp(1.7rem, 2vw, 2.2rem);
+  line-height: 0.95;
+}
+
+a {
+  color: inherit;
+}
