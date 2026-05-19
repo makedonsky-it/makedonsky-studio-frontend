@@ -8,17 +8,120 @@ import {
 import { apiRequest } from './api'
 import './App.css'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
+const getDefaultApiBaseUrl = () => {
+  return '/api/v1'
+}
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? getDefaultApiBaseUrl()
 const ACCESS_TOKEN_KEY = 'makedonsky_access_token'
 const GUEST_CART_KEY = 'makedonsky_guest_cart'
 
-const categoryLabels = {
-  Paintings: 'Картины',
-  Busts: 'Бюсты',
-  Sculptures: 'Скульптуры',
+const getAssetBaseUrl = () => {
+  try {
+    const fallbackOrigin =
+      typeof window === 'undefined' ? 'http://localhost:8080' : window.location.origin
+    const apiUrl = new URL(API_BASE_URL, fallbackOrigin)
+    apiUrl.pathname = apiUrl.pathname.replace(/\/api(?:\/v\d+)?\/?$/, '/')
+    apiUrl.search = ''
+    apiUrl.hash = ''
+    return apiUrl.toString()
+  } catch {
+    return ''
+  }
 }
 
+const ASSET_BASE_URL = getAssetBaseUrl()
+
+const categoryLabels = {
+  Paintings: 'Картины',
+  Prints: 'Картины',
+  Busts: 'Бюсты',
+  Sculptures: 'Скульптуры',
+  Apparel: 'Одежда',
+  Accessories: 'Аксессуары',
+}
+
+const fallbackCategoryNames = ['Paintings', 'Busts', 'Sculptures']
+
 const fallbackProducts = [
+  {
+    id: 'ms-005',
+    title: 'Торс Аполлона Бельведерского',
+    artist: 'После античного оригинала',
+    category: 'Sculptures',
+    price: 172000,
+    stock: 1,
+    image: '/real.jpg',
+    description: 'Выразительная интерьерная скульптура с музейным силуэтом и плотной пластикой.',
+    period: 'Римская традиция',
+    medium: 'Гипс',
+    createdBy: 'fallback',
+  },
+  {
+    id: 'ms-006',
+    title: 'Этюд античной головы',
+    artist: 'Академическая школа',
+    category: 'Sculptures',
+    price: 94000,
+    stock: 3,
+    image: '/real.jpg',
+    description: 'Компактная учебная скульптура для кабинета, мастерской или домашней библиотеки.',
+    period: 'XIX век',
+    medium: 'Гипс',
+    createdBy: 'fallback',
+  },
+  {
+    id: 'ms-007',
+    title: 'Рельеф с античным профилем',
+    artist: 'Современная мастерская',
+    category: 'Sculptures',
+    price: 88000,
+    stock: 4,
+    image: '/real.jpg',
+    description: 'Настенный рельеф с собранной геометрией формы и мягкой светотенью.',
+    period: 'XXI век',
+    medium: 'Каменный композит',
+    createdBy: 'fallback',
+  },
+  {
+    id: 'ms-008',
+    title: 'Учебная репродукция "Император"',
+    artist: 'По мотивам Жака-Луи Давида',
+    category: 'Paintings',
+    price: 76000,
+    stock: 5,
+    image: '/art/bonaparte-crossing-the-alps.jpg',
+    description: 'Декоративная репродукция с торжественным историческим жестом и насыщенным цветом.',
+    period: 'XIX век',
+    medium: 'Печать на холсте',
+    createdBy: 'fallback',
+  },
+  {
+    id: 'ms-009',
+    title: 'Философский кабинет',
+    artist: 'Римская копия',
+    category: 'Busts',
+    price: 132000,
+    stock: 2,
+    image: '/art/epicurus-bust.jpg',
+    description: 'Камерный бюст для пространства, где нужен спокойный античный акцент.',
+    period: 'По греческому оригиналу',
+    medium: 'Мрамор',
+    createdBy: 'fallback',
+  },
+  {
+    id: 'ms-010',
+    title: 'Афинская голова',
+    artist: 'После греческого оригинала',
+    category: 'Busts',
+    price: 138000,
+    stock: 1,
+    image: '/art/athena-bust.jpg',
+    description: 'Строгий музейный образ с ясным профилем и светлой каменной фактурой.',
+    period: 'Римская копия',
+    medium: 'Мрамор',
+    createdBy: 'fallback',
+  },
   {
     id: 'ms-001',
     title: 'Бонапарт на перевале Сен-Бернар',
@@ -73,6 +176,57 @@ const fallbackProducts = [
   },
 ]
 
+const parseProductDescription = (value) => {
+  const rawDescription = typeof value === 'string' ? value.trim() : ''
+
+  if (!rawDescription) {
+    return {
+      description: '',
+      artist: '',
+      period: '',
+      medium: '',
+    }
+  }
+
+  const segments = rawDescription
+    .split(/\n{2,}|\n/g)
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+
+  const details = {
+    description: [],
+    artist: '',
+    period: '',
+    medium: '',
+  }
+
+  for (const segment of segments) {
+    if (segment.startsWith('Автор:')) {
+      details.artist = segment.slice('Автор:'.length).trim()
+      continue
+    }
+
+    if (segment.startsWith('Период:')) {
+      details.period = segment.slice('Период:'.length).trim()
+      continue
+    }
+
+    if (segment.startsWith('Материал:')) {
+      details.medium = segment.slice('Материал:'.length).trim()
+      continue
+    }
+
+    details.description.push(segment)
+  }
+
+  return {
+    description: details.description.join('\n\n') || rawDescription,
+    artist: details.artist,
+    period: details.period,
+    medium: details.medium,
+  }
+}
+
 const emptyAuthForm = {
   name: '',
   email: '',
@@ -96,6 +250,7 @@ const emptyCheckoutForm = {
   phone: '',
   city: '',
   address: '',
+  postalCode: '',
   comment: '',
 }
 
@@ -124,17 +279,40 @@ const normalizeCategory = (value) => {
     return 'Paintings'
   }
 
-  const lower = String(value).toLowerCase()
+  return String(value)
+}
 
-  if (lower.includes('bust') || lower.includes('бюст')) {
-    return 'Busts'
+const getCategoryLabel = (value) => categoryLabels[value] ?? value
+
+const resolveAssetUrl = (value) => {
+  if (typeof value !== 'string') {
+    return ''
   }
 
-  if (lower.includes('sculpt') || lower.includes('скульп')) {
-    return 'Sculptures'
+  const normalizedValue = value.trim()
+
+  if (!normalizedValue) {
+    return ''
   }
 
-  return 'Paintings'
+  if (
+    normalizedValue.startsWith('http://') ||
+    normalizedValue.startsWith('https://') ||
+    normalizedValue.startsWith('data:') ||
+    normalizedValue.startsWith('blob:')
+  ) {
+    return normalizedValue
+  }
+
+  if (normalizedValue.startsWith('/art/') || normalizedValue.startsWith('/real.jpg')) {
+    return normalizedValue
+  }
+
+  if (!ASSET_BASE_URL) {
+    return normalizedValue
+  }
+
+  return new URL(normalizedValue, ASSET_BASE_URL).toString()
 }
 
 const normalizeUser = (user) => ({
@@ -144,24 +322,31 @@ const normalizeUser = (user) => ({
   role: user.role ?? 'customer',
 })
 
-const mapApiProduct = (product) => ({
-  id: product.id ?? product.slug ?? `item-${crypto.randomUUID?.() ?? Math.random()}`,
-  title: product.title ?? product.name ?? 'Без названия',
-  artist: product.artist ?? product.author ?? 'Не указан',
-  category: normalizeCategory(product.category),
-  price: Number(product.price ?? 0),
-  stock: Number(product.stock ?? 0),
-  image:
-    product.coverImageUrl ??
-    product.imageUrl ??
-    product.image ??
-    product.previewUrl ??
-    '',
-  description: product.description ?? '',
-  period: product.period ?? product.year ?? '',
-  medium: product.medium ?? product.material ?? '',
-  createdBy: product.createdBy ?? 'api',
-})
+const mapApiProduct = (product) => {
+  const parsedDescription = parseProductDescription(product.description)
+
+  return {
+    id: product.id ?? product.slug ?? `item-${crypto.randomUUID?.() ?? Math.random()}`,
+    title: product.title ?? product.name ?? 'Без названия',
+    artist: product.artist ?? product.author ?? parsedDescription.artist ?? 'Не указан',
+    category: normalizeCategory(product.category),
+    price: Number(product.price ?? 0),
+    stock: Number(product.stock ?? 0),
+    image:
+      resolveAssetUrl(
+        product.coverImageUrl ??
+          product.gallery?.[0] ??
+          product.imageUrl ??
+          product.image ??
+          product.previewUrl ??
+          '',
+      ),
+    description: parsedDescription.description,
+    period: product.period ?? product.year ?? parsedDescription.period ?? '',
+    medium: product.medium ?? product.material ?? parsedDescription.medium ?? '',
+    createdBy: product.createdBy ?? 'api',
+  }
+}
 
 const mapCartItem = (item) => {
   const product = item.product ?? {}
@@ -172,11 +357,9 @@ const mapCartItem = (item) => {
     price: Number(item.price ?? product.price ?? 0),
     title: item.title ?? product.title ?? 'Без названия',
     image:
-      item.image ??
-      product.coverImageUrl ??
-      product.imageUrl ??
-      product.image ??
-      '',
+      resolveAssetUrl(
+        item.image ?? product.coverImageUrl ?? product.imageUrl ?? product.image ?? '',
+      ),
     subtotal:
       Number(
         item.subtotal ??
@@ -343,6 +526,7 @@ function App() {
   const [authForm, setAuthForm] = useState(emptyAuthForm)
   const [checkoutForm, setCheckoutForm] = useState(emptyCheckoutForm)
   const [productForm, setProductForm] = useState(emptyProductForm)
+  const [categoryOptions, setCategoryOptions] = useState(fallbackCategoryNames)
   const [cartItems, setCartItems] = useState(getGuestCart)
   const [notice, setNotice] = useState('')
   const [authError, setAuthError] = useState(null)
@@ -522,6 +706,26 @@ function App() {
     }
   }, [queryState, requestApi])
 
+  const loadCategories = useCallback(async () => {
+    try {
+      const response = await requestApi({
+        path: '/categories',
+        useAuth: false,
+      })
+
+      const rawCategories = Array.isArray(response.data) ? response.data : []
+      const nextNames = rawCategories
+        .map((category) => category?.name)
+        .filter((name) => typeof name === 'string' && name.trim().length > 0)
+
+      if (nextNames.length > 0) {
+        setCategoryOptions(Array.from(new Set(nextNames)))
+      }
+    } catch {
+      setCategoryOptions(fallbackCategoryNames)
+    }
+  }, [requestApi])
+
   useEffect(() => {
     let active = true
 
@@ -560,10 +764,21 @@ function App() {
     return () => window.clearTimeout(timeoutId)
   }, [loadCatalog])
 
-  const categories = useMemo(() => ['Все', ...Object.keys(categoryLabels)], [])
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadCategories()
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [loadCategories])
+
+  const categories = useMemo(() => ['Все', ...categoryOptions], [categoryOptions])
   const currentProducts = catalogState.items
   const currentPage = catalogState.meta.page ?? queryState.page
   const totalPages = catalogState.meta.totalPages ?? 1
+  const selectedProductCategory = categoryOptions.includes(productForm.category)
+    ? productForm.category
+    : (categoryOptions[0] ?? 'Paintings')
 
   const cartViewItems = cartItems.map((item) => {
     const product = currentProducts.find((entry) => entry.id === item.productId)
@@ -953,6 +1168,7 @@ function App() {
           address: {
             city: checkoutForm.city.trim(),
             line1: checkoutForm.address.trim(),
+            postalCode: checkoutForm.postalCode.trim(),
           },
         },
       })
@@ -1005,20 +1221,27 @@ function App() {
     setAdminError(null)
 
     try {
+      const descriptionParts = [
+        productForm.description.trim(),
+        productForm.artist.trim() ? `Автор: ${productForm.artist.trim()}` : '',
+        productForm.period.trim() ? `Период: ${productForm.period.trim()}` : '',
+        productForm.medium.trim() ? `Материал: ${productForm.medium.trim()}` : '',
+      ].filter(Boolean)
+
       const imageUrl = await uploadProductImage()
       await requestApi({
         path: '/products',
         method: 'POST',
         body: {
           title: productForm.title.trim(),
-          artist: productForm.artist.trim(),
-          category: productForm.category,
+          description: descriptionParts.join('\n\n'),
+          category: selectedProductCategory,
           price: Number(productForm.price),
+          currency: 'RUB',
           stock: Number(productForm.stock),
-          description: productForm.description.trim(),
-          period: productForm.period.trim(),
-          medium: productForm.medium.trim(),
+          status: 'active',
           coverImageUrl: imageUrl,
+          gallery: imageUrl ? [imageUrl] : [],
         },
       })
 
@@ -1162,7 +1385,7 @@ function App() {
                 className={queryState.category === category ? 'is-active' : undefined}
                 onClick={() => handleCategoryChange(category)}
               >
-                {category === 'Все' ? category : categoryLabels[category]}
+                {category === 'Все' ? category : getCategoryLabel(category)}
               </button>
             ))}
           </div>
@@ -1181,7 +1404,7 @@ function App() {
                     ) : (
                       <div className="product-fallback" />
                     )}
-                    <span>{categoryLabels[product.category] ?? product.category}</span>
+                    <span>{getCategoryLabel(product.category)}</span>
                   </div>
 
                   <div className="product-copy">
@@ -1202,7 +1425,7 @@ function App() {
                       <strong>{formatPrice(product.price)}</strong>
                       <span>{product.medium || 'Коллекционная работа'}</span>
                     </div>
-                    <span>{product.period || categoryLabels[product.category]}</span>
+                    <span>{product.period || getCategoryLabel(product.category)}</span>
                   </div>
 
                   <button
@@ -1419,6 +1642,12 @@ function App() {
                   onChange={handleCheckoutInput}
                 />
               </div>
+              <input
+                name="postalCode"
+                placeholder="Индекс"
+                value={checkoutForm.postalCode}
+                onChange={handleCheckoutInput}
+              />
               <textarea
                 name="comment"
                 rows="3"
@@ -1479,12 +1708,12 @@ function App() {
                 />
                 <select
                   name="category"
-                  value={productForm.category}
+                  value={selectedProductCategory}
                   onChange={handleProductInput}
                 >
-                  {Object.entries(categoryLabels).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
+                  {categoryOptions.map((category) => (
+                    <option key={category} value={category}>
+                      {getCategoryLabel(category)}
                     </option>
                   ))}
                 </select>
